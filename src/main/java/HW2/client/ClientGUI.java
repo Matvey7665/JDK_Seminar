@@ -1,4 +1,6 @@
-package server;
+package HW2.client;
+
+import HW2.server.ServerWindow;
 
 import javax.swing.*;
 import java.awt.*;
@@ -141,6 +143,10 @@ public class ClientGUI extends JFrame {
             disconnectFromServer();
         }
         super.processWindowEvent(e);
+    }
+
+    public void disconnectedFromServer() {
+
     }
 }
 

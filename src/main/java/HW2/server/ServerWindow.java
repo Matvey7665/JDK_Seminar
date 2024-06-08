@@ -1,5 +1,7 @@
 
-package server;
+package HW2.server;
+
+import HW2.client.ClientGUI;
 
 import javax.swing.*;
 import java.awt.*;
