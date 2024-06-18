@@ -1,90 +1,124 @@
 package HW2.client;
 
-import HW2.server.ServerWindow;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 
-public class ClientGUI extends JFrame {
-    public static final int WIDTH = 400;
-    public static final int HEIGHT = 300;
+/**
+ * Класс описывающий работу графического интерфейса приложения.
+ * Является абстракцией GUI
+ */
+public class ClientGUI extends JFrame implements ClientView{
+    private static final int WIDTH = 400;
+    private static final int HEIGHT = 300;
 
-    private ServerWindow server;
-    private boolean connected;
-    private String name;
+    private JTextArea log;
+    private JTextField tfIPAddress, tfPort, tfLogin, tfMessage;
+    private JPasswordField password;
+    private JButton btnLogin, btnSend;
+    private JPanel headerPanel;
 
-    JTextArea log;
-    JTextField tfIPAddress, tfPort, tfLogin, tfMessage;
-    JPasswordField password;
-    JButton btnLogin, btnSend;
-    JPanel headerPanel;
+    /**
+     * Контроллер, описывающий реакцию на различные события.
+     * Когда что-то происходит, например нажата какая-то кнопка на экране, то обращаемся
+     * к контроллеру и вызываем нужный метод
+     */
+    private ClientController clientController;
 
-    public ClientGUI(ServerWindow server){
-        this.server = server;
-
-        setSize(WIDTH, HEIGHT);
-        setResizable(false);
-        setTitle("Chat client");
-        setLocation(server.getX() - 500, server.getY());
-
+    /**
+     * Конструктор класса
+     */
+    public ClientGUI() {
+        setting();
         createPanel();
 
         setVisible(true);
     }
 
-    public void answer(String text){
-        appendLog(text);
+    //сеттер
+    public void setClient(ClientController clientController) {
+        this.clientController = clientController;
     }
 
-    private void connectToServer() {
-        if (server.connectUser(this)){
-            appendLog("Вы успешно подключились!\n");
+    /**
+     * Настройка основных параметров GUI
+     */
+    private void setting() {
+        setSize(WIDTH, HEIGHT);
+        setResizable(false);
+        setTitle("Chat client");
+//        setLocation(serverWindow.getX() - 500, serverWindow.getY());
+        setDefaultCloseOperation(HIDE_ON_CLOSE);
+    }
+
+    /**
+     * Метод вывода текста на экран GUI. Вызывается из контроллера
+     * @param msg текст, который требуется отобразить на экране
+     */
+    @Override
+    public void showMessage(String msg) {
+        log.append(msg + "\n");
+    }
+
+    /**
+     * Метод, описывающий отключение клиента от сервера со стороны сервера
+     */
+    @Override
+    public void disconnectedFromServer(){
+        hideHeaderPanel(true);
+    }
+
+    @Override
+    public void setClientController(ClientController clientController) {
+        this.clientController = clientController;
+    }
+
+    /**
+     * Метод, описывающий отключение клиента от сервера со стороны клиента
+     */
+    public void disconnectFromServer(){
+        clientController.disconnectFromServer();
+    }
+
+    /**
+     * Метод изменения видимости верхней панели экрана, на которой виджеты для авторизации (например кнопка логин)
+     * @param visible true, если надо сделать панель видимой
+     */
+    public void hideHeaderPanel(boolean visible){
+        headerPanel.setVisible(visible);
+    }
+
+    /**
+     * Метод, срабатывающий при нажатии кнопки авторизации
+     */
+    public void login(){
+        if (clientController.connectToServer(tfLogin.getText())){
             headerPanel.setVisible(false);
-            connected = true;
-            name = tfLogin.getText();
-            String log = server.getLog();
-            if (log != null){
-                appendLog(log);
-            }
-        } else {
-            appendLog("Подключение не удалось");
         }
     }
 
-    public void disconnectFromServer() {
-        if (connected) {
-            headerPanel.setVisible(true);
-            connected = false;
-            server.disconnectUser(this);
-            appendLog("Вы были отключены от сервера!");
-        }
+    /**
+     * Метод для отправки сообщения. Используется при нажатии на кнопку send
+     */
+    private void message(){
+        clientController.message(tfMessage.getText());
+        tfMessage.setText("");
     }
 
-    public void message(){
-        if (connected){
-            String text = tfMessage.getText();
-            if (!text.equals("")){
-                server.message(name + ": " + text);
-                tfMessage.setText("");
-            }
-        } else {
-            appendLog("Нет подключения к серверу");
-        }
-
-    }
-
-    private void appendLog(String text){
-        log.append(text + "\n");
-    }
-
+    /**
+     * Метод добавления виджетов на экран
+     */
     private void createPanel() {
         add(createHeaderPanel(), BorderLayout.NORTH);
         add(createLog());
         add(createFooter(), BorderLayout.SOUTH);
     }
 
-    private Component createHeaderPanel(){
+    /**
+     * Метод создания панели авторизации
+     * @return возвращает созданную панель
+     */
+    private Component createHeaderPanel() {
         headerPanel = new JPanel(new GridLayout(2, 3));
         tfIPAddress = new JTextField("127.0.0.1");
         tfPort = new JTextField("8189");
@@ -94,7 +128,7 @@ public class ClientGUI extends JFrame {
         btnLogin.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                connectToServer();
+                login();
             }
         });
 
@@ -108,19 +142,27 @@ public class ClientGUI extends JFrame {
         return headerPanel;
     }
 
-    private Component createLog(){
+    /**
+     * Метод создания центральной панели, на которой отображается история сообщений
+     * @return возвращает созданную панель
+     */
+    private Component createLog() {
         log = new JTextArea();
         log.setEditable(false);
         return new JScrollPane(log);
     }
 
+    /**
+     * Метод создания панели отправки сообщений
+     * @return возвращает созданную панель
+     */
     private Component createFooter() {
         JPanel panel = new JPanel(new BorderLayout());
         tfMessage = new JTextField();
         tfMessage.addKeyListener(new KeyAdapter() {
             @Override
             public void keyTyped(KeyEvent e) {
-                if (e.getKeyChar() == '\n'){
+                if (e.getKeyChar() == '\n') {
                     message();
                 }
             }
@@ -137,18 +179,15 @@ public class ClientGUI extends JFrame {
         return panel;
     }
 
+    /**
+     * Метод срабатывающий при важных событиях связанных с графическим окном (например окно в фокусе)
+     * @param e  the window event
+     */
     @Override
     protected void processWindowEvent(WindowEvent e) {
-        if (e.getID() == WindowEvent.WINDOW_CLOSING){
-            disconnectFromServer();
-        }
         super.processWindowEvent(e);
-    }
-
-    public void disconnectedFromServer() {
-
+        if (e.getID() == WindowEvent.WINDOW_CLOSING){
+            this.disconnectedFromServer();
+        }
     }
 }
-
-
-
